@@ -1,62 +1,68 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Query
 import requests
+from typing import List
 
 app = FastAPI()
 
-# Function to check if a number is prime
-def is_prime(n: int) -> bool:
-    if n < 2:
+NUMBERS_API_URL = "http://numbersapi.com/{number}/math?json"
+
+# Helper function to check if the number is prime
+def is_prime(number: int) -> bool:
+    if number <= 1:
         return False
-    for i in range(2, int(n ** 0.5) + 1):
-        if n % i == 0:
+    for i in range(2, int(number ** 0.5) + 1):
+        if number % i == 0:
             return False
     return True
 
-# Function to check if a number is perfect
-def is_perfect(n: int) -> bool:
-    divisors = [i for i in range(1, n) if n % i == 0]
-    return sum(divisors) == n
+# Helper function to check if the number is perfect
+def is_perfect(number: int) -> bool:
+    divisors_sum = sum(i for i in range(1, number) if number % i == 0)
+    return divisors_sum == number
 
-# Function to check if a number is Armstrong
-def is_armstrong(n: int) -> bool:
-    digits = [int(digit) for digit in str(n)]
-    return sum([digit**len(digits) for digit in digits]) == n
+# Helper function to check if the number is Armstrong
+def is_armstrong(number: int) -> bool:
+    digits = [int(digit) for digit in str(number)]
+    return sum(digit ** len(digits) for digit in digits) == number
 
-# Function to calculate the sum of digits
-def digit_sum(n: int) -> int:
-    return sum([int(digit) for digit in str(n)])
+# Helper function to calculate the digit sum
+def digit_sum(number: int) -> int:
+    return sum(int(digit) for digit in str(number))
 
-# Function to fetch fun fact from Numbers API
-def get_fun_fact(n: int) -> str:
-    response = requests.get(f"http://numbersapi.com/{n}")
-    return response.text
+# Helper function to get a fun fact from Numbers API
+def get_fun_fact(number: int) -> str:
+    response = requests.get(NUMBERS_API_URL.format(number=number))
+    if response.status_code == 200:
+        return response.json().get("text", "")
+    else:
+        raise HTTPException(status_code=500, detail="Error fetching fun fact from Numbers API")
 
-# Main endpoint
 @app.get("/api/classify-number")
-async def classify_number(number: int):
-    if isinstance(number, int):
-        prime = is_prime(number)
-        perfect = is_perfect(number)
-        armstrong = is_armstrong(number)
-        properties = []
+async def classify_number(number: str = Query(...)):
+    # Validate if the number is an integer
+    try:
+        number = int(number)
+    except ValueError:
+        return {"number": number, "error": True}
 
-        if armstrong:
-            properties.append("armstrong")
-        if number % 2 == 0:
-            properties.append("even")
-        else:
-            properties.append("odd")
-        
-        fact = get_fun_fact(number)
-        
-        return {
-            "number": number,
-            "is_prime": prime,
-            "is_perfect": perfect,
-            "properties": properties,
-            "digit_sum": digit_sum(number),
-            "fun_fact": fact
-        }
+    # Classify the number properties
+    properties = []
 
-    return {"number": str(number), "error": True}
+    if is_armstrong(number):
+        properties.append("armstrong")
+    if number % 2 == 0:
+        properties.append("even")
+    else:
+        properties.append("odd")
+
+    # Prepare the response data
+    response_data = {
+        "number": number,
+        "is_prime": is_prime(number),
+        "is_perfect": is_perfect(number),
+        "properties": properties,
+        "digit_sum": digit_sum(number),
+        "fun_fact": get_fun_fact(number),
+    }
+
+    return response_data
