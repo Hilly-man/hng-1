@@ -33,7 +33,8 @@ def read_root():
     return {"message": "API is Live!"}
 
 
-@app.get("/api/classify-number")
+
+@app.get("/api/classify_number")
 def classify_number(number: int = Query(..., description="The number to classify")):
     properties = []
     
