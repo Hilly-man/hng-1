@@ -37,12 +37,12 @@ def get_fun_fact(n: int) -> str:
     response = requests.get(f"http://numbersapi.com/{n}/math?json")
     return response.json().get("text", "No fun fact found.")
 
-@app.get("/")
-def home():
-    return {"message": "Welcome to the Number Classification API!"}
+# @app.get("/")
+# def home():
+#     return {"message": "Welcome to the Number Classification API!"}
 
 # API Endpoint
-@app.get("/api/classify-number")
+@app.get("/")
 def classify_number(number: int = Query(..., description="The number to classify")):
     properties = ["odd" if number % 2 else "even"]
     if is_armstrong(number):
