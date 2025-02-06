@@ -1,53 +1,62 @@
-from fastapi import FastAPI, Query, HTTPException
+from fastapi import FastAPI
+from pydantic import BaseModel
 import requests
 
 app = FastAPI()
 
+# Function to check if a number is prime
 def is_prime(n: int) -> bool:
     if n < 2:
         return False
-    for i in range(2, int(n**0.5) + 1):
+    for i in range(2, int(n ** 0.5) + 1):
         if n % i == 0:
             return False
     return True
 
+# Function to check if a number is perfect
 def is_perfect(n: int) -> bool:
-    return sum(i for i in range(1, n) if n % i == 0) == n
+    divisors = [i for i in range(1, n) if n % i == 0]
+    return sum(divisors) == n
 
+# Function to check if a number is Armstrong
 def is_armstrong(n: int) -> bool:
-    digits = [int(d) for d in str(n)]
-    power = len(digits)
-    return sum(d**power for d in digits) == n
+    digits = [int(digit) for digit in str(n)]
+    return sum([digit**len(digits) for digit in digits]) == n
 
+# Function to calculate the sum of digits
+def digit_sum(n: int) -> int:
+    return sum([int(digit) for digit in str(n)])
+
+# Function to fetch fun fact from Numbers API
 def get_fun_fact(n: int) -> str:
-    try:
-        response = requests.get(f"http://numbersapi.com/{n}/math?json", timeout=5)
-        response.raise_for_status()
-        return response.json().get("text", "No fun fact found.")
-    except requests.RequestException:
-        return "No fun fact found."
+    response = requests.get(f"http://numbersapi.com/{n}")
+    return response.text
 
-
-@app.get("/")
-def read_root():
-    return {"message": "API is Live!"}
-
-
-
+# Main endpoint
 @app.get("/api/classify-number")
-def classify_number(number: int = Query(..., description="The number to classify")):
-    properties = []
-    
-    if is_armstrong(number):
-        properties.append("armstrong")
-    
-    properties.append("odd" if number % 2 else "even")
+async def classify_number(number: int):
+    if isinstance(number, int):
+        prime = is_prime(number)
+        perfect = is_perfect(number)
+        armstrong = is_armstrong(number)
+        properties = []
 
-    return {
-        "number": number,
-        "is_prime": is_prime(number),
-        "is_perfect": is_perfect(number),
-        "properties": properties,
-        "digit_sum": sum(map(int, str(number))),
-        "fun_fact": get_fun_fact(number)
-    }
+        if armstrong:
+            properties.append("armstrong")
+        if number % 2 == 0:
+            properties.append("even")
+        else:
+            properties.append("odd")
+        
+        fact = get_fun_fact(number)
+        
+        return {
+            "number": number,
+            "is_prime": prime,
+            "is_perfect": perfect,
+            "properties": properties,
+            "digit_sum": digit_sum(number),
+            "fun_fact": fact
+        }
+
+    return {"number": str(number), "error": True}
