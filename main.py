@@ -29,6 +29,30 @@ def is_armstrong(number: int) -> bool:
 def digit_sum(number: int) -> int:
     return sum(int(digit) for digit in str(number))
 
+
+# External endpoint URL
+EXTERNAL_API_URL = "https://hng-1-34sn.onrender.com/api/classify-number?number={number}"
+
+def get_fun_fact(number: int) -> str:
+    # Send GET request to the external API with the number
+    response = requests.get(EXTERNAL_API_URL.format(number=number))
+
+    if response.status_code == 200:
+        # Assuming the external API returns the required fun fact directly
+        fact_data = response.json()
+        
+        # Extract the fun fact from the response
+        fun_fact = fact_data.get("fun_fact", "")
+        
+        if fun_fact:
+            return fun_fact  # Return the fun fact from the external API
+        else:
+            raise HTTPException(status_code=500, detail="Fun fact not found in the external API response")
+    else:
+        raise HTTPException(status_code=500, detail="Error fetching fun fact from external API")
+
+
+
 def get_fun_fact(number: int) -> str:
     response = requests.get(NUMBERS_API_URL.format(number=number))
     if response.status_code == 200:
