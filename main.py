@@ -32,9 +32,8 @@ def get_fun_fact(n: int) -> str:
 def read_root():
     return {"message": "API is Live!"}
 
-
 @app.get("/api/classify-number")
-def classify_number(number: str = Query(..., description="The number to classify")):
+def classify_number(number: int = Query(..., description="The number to classify")):
     if not number.lstrip("-").isdigit():  # Check if it's a valid integer
         raise HTTPException(status_code=400, detail={"number": number, "error": True})
 
