@@ -32,15 +32,14 @@ def get_fun_fact(n: int) -> str:
 def read_root():
     return {"message": "API is Live!"}
 
+
 @app.get("/api/classify-number")
 def classify_number(number: int = Query(..., description="The number to classify")):
-    if not number.lstrip("-").isdigit():  # Check if it's a valid integer
-        raise HTTPException(status_code=400, detail={"number": number, "error": True})
-
-    number = int(number)
     properties = []
+    
     if is_armstrong(number):
         properties.append("armstrong")
+    
     properties.append("odd" if number % 2 else "even")
 
     return {
@@ -48,6 +47,6 @@ def classify_number(number: int = Query(..., description="The number to classify
         "is_prime": is_prime(number),
         "is_perfect": is_perfect(number),
         "properties": properties,
-        "digit_sum": sum(map(int, str(abs(number)))),  # sum of digits
+        "digit_sum": sum(map(int, str(number))),
         "fun_fact": get_fun_fact(number)
     }
