@@ -34,7 +34,7 @@ def read_root():
 
 
 
-@app.get("/api/classify_number")
+@app.get("/api/classify-number")
 def classify_number(number: int = Query(..., description="The number to classify")):
     properties = []
     
