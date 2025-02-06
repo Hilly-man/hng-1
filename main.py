@@ -29,11 +29,19 @@ def is_armstrong(number: int) -> bool:
 def digit_sum(number: int) -> int:
     return sum(int(digit) for digit in str(number))
 
-# Helper function to get a fun fact from Numbers API
 def get_fun_fact(number: int) -> str:
     response = requests.get(NUMBERS_API_URL.format(number=number))
     if response.status_code == 200:
-        return response.json().get("text", "")
+        # Modify the fun fact to include the calculation for Armstrong numbers
+        fact = response.json().get("text", "")
+        
+        # If the fact is about Armstrong, we can format it specifically
+        if "narcissistic" in fact.lower():
+            # If the number is narcissistic (Armstrong), add the detailed calculation
+            digits = [int(digit) for digit in str(number)]
+            calculation = " + ".join(f"{digit}^{len(digits)}" for digit in digits)
+            return f"{number} is an Armstrong number because {calculation} = {number}"
+        return fact
     else:
         raise HTTPException(status_code=500, detail="Error fetching fun fact from Numbers API")
 
