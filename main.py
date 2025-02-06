@@ -1,102 +1,87 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, Query, HTTPException
 import requests
-from typing import List
 
 app = FastAPI()
 
-NUMBERS_API_URL = "http://numbersapi.com/{number}/math?json"
-
-# Helper function to check if the number is prime
-def is_prime(number: int) -> bool:
-    if number <= 1:
-        return False
-    for i in range(2, int(number ** 0.5) + 1):
-        if number % i == 0:
-            return False
-    return True
-
-# Helper function to check if the number is perfect
-def is_perfect(number: int) -> bool:
-    divisors_sum = sum(i for i in range(1, number) if number % i == 0)
-    return divisors_sum == number
-
-# Helper function to check if the number is Armstrong
-def is_armstrong(number: int) -> bool:
-    digits = [int(digit) for digit in str(number)]
-    return sum(digit ** len(digits) for digit in digits) == number
-
-# Helper function to calculate the digit sum
-def digit_sum(number: int) -> int:
-    return sum(int(digit) for digit in str(number))
-
-
-# External endpoint URL
+# External API URL for fetching fun facts
 EXTERNAL_API_URL = "https://hng-1-34sn.onrender.com/api/classify-number?number={number}"
 
-def get_fun_fact(number: int) -> str:
-    # Send GET request to the external API with the number
-    response = requests.get(EXTERNAL_API_URL.format(number=number))
-
-    if response.status_code == 200:
-        # Assuming the external API returns the required fun fact directly
-        fact_data = response.json()
-        
-        # Extract the fun fact from the response
-        fun_fact = fact_data.get("fun_fact", "")
-        
-        if fun_fact:
-            return fun_fact  # Return the fun fact from the external API
-        else:
-            raise HTTPException(status_code=500, detail="Fun fact not found in the external API response")
-    else:
-        raise HTTPException(status_code=500, detail="Error fetching fun fact from external API")
-
-
-
-def get_fun_fact(number: int) -> str:
-    response = requests.get(NUMBERS_API_URL.format(number=number))
-    if response.status_code == 200:
-        fact = response.json().get("text", "")
-
-        # Check if the returned fact mentions "narcissistic" (which is another term for Armstrong numbers)
-        if "narcissistic" in fact.lower():
-            # If it's an Armstrong number, provide the detailed calculation
-            digits = [int(digit) for digit in str(number)]
-            calculation = " + ".join(f"{digit}^{len(digits)}" for digit in digits)
-            return f"{number} is an Armstrong number because {calculation} = {number}"
-
-        return fact  # If it's not narcissistic, return the original fact
-
-    else:
-        raise HTTPException(status_code=500, detail="Error fetching fun fact from Numbers API")
-    
+@app.get("/")
+def read_root():
+    """Root endpoint to show API usage instructions"""
+    return {"message": "Welcome to the Number Classifier API! Use /api/classify-number?number=371"}
 
 @app.get("/api/classify-number")
-async def classify_number(number: str = Query(...)):
-    # Validate if the number is an integer
-    try:
-        number = int(number)
-    except ValueError:
-        return {"number": number, "error": True}
+def classify_number(number: int = Query(..., description="The number to classify")):
+    """
+    API endpoint to classify a number and fetch its fun fact.
+    Example: /api/classify-number?number=371
+    """
 
-    # Classify the number properties
+    # Check if the number is a valid integer
+    if not isinstance(number, int):
+        raise HTTPException(status_code=400, detail="Invalid number format. Please provide an integer.")
+
+    # Properties of the number
     properties = []
-
+    
+    # Check if the number is prime
+    if is_prime(number):
+        properties.append("prime")
+    
+    # Check if the number is perfect
+    if is_perfect(number):
+        properties.append("perfect")
+    
+    # Check if the number is Armstrong
     if is_armstrong(number):
         properties.append("armstrong")
-    if number % 2 == 0:
-        properties.append("even")
-    else:
-        properties.append("odd")
+    
+    # Check if the number is odd or even
+    properties.append("odd" if number % 2 != 0 else "even")
+    
+    # Calculate digit sum
+    digit_sum = sum(int(digit) for digit in str(number))
 
-    # Prepare the response data
-    response_data = {
+    # Fetch fun fact from external API
+    fun_fact = get_fun_fact(number)
+
+    return {
         "number": number,
         "is_prime": is_prime(number),
         "is_perfect": is_perfect(number),
         "properties": properties,
-        "digit_sum": digit_sum(number),
-        "fun_fact": get_fun_fact(number),
+        "digit_sum": digit_sum,
+        "fun_fact": fun_fact
     }
 
-    return response_data
+def is_prime(n: int) -> bool:
+    """Checks if a number is prime"""
+    if n < 2:
+        return False
+    for i in range(2, int(n ** 0.5) + 1):
+        if n % i == 0:
+            return False
+    return True
+
+def is_perfect(n: int) -> bool:
+    """Checks if a number is a perfect number"""
+    return sum(i for i in range(1, n) if n % i == 0) == n
+
+def is_armstrong(n: int) -> bool:
+    """Checks if a number is an Armstrong (Narcissistic) number"""
+    digits = [int(d) for d in str(n)]
+    power = len(digits)
+    return sum(d ** power for d in digits) == n
+
+def get_fun_fact(number: int) -> str:
+    """Fetches a fun fact for the number from the external API"""
+    try:
+        response = requests.get(EXTERNAL_API_URL.format(number=number))
+        if response.status_code == 200:
+            data = response.json()
+            return data.get("fun_fact", "No fun fact available.")
+        else:
+            return "Error fetching fun fact."
+    except requests.exceptions.RequestException:
+        return "Failed to connect to external API."
